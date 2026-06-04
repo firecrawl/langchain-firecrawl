@@ -32,9 +32,9 @@ dependencies = [
 [project.urls]
 Homepage = "https://www.firecrawl.dev"
 Documentation = "https://docs.langchain.com/oss/python/integrations/providers/firecrawl"
-Repository = "https://github.com/langchain-ai/langchain"
-Issues = "https://github.com/langchain-ai/langchain/issues"
-Changelog = "https://github.com/langchain-ai/langchain/releases?q=%22langchain-firecrawl%22"
+Repository = "https://github.com/firecrawl/langchain-firecrawl"
+Issues = "https://github.com/firecrawl/langchain-firecrawl/issues"
+Changelog = "https://github.com/firecrawl/langchain-firecrawl/releases"
 Twitter = "https://x.com/langchain_oss"
 Slack = "https://www.langchain.com/join-community"
 Reddit = "https://www.reddit.com/r/LangChain/"
