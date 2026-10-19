@@ -87,18 +87,21 @@ def initialize_client(values: dict) -> dict:
     return values
 
 
-def clean_params(params: dict[str, Any]) -> dict[str, Any]:
-    """Drop ``None`` values and inject the LangChain attribution tag.
+def clean_params(
+    params: dict[str, Any], integration: str = INTEGRATION
+) -> dict[str, Any]:
+    """Drop ``None`` values and inject the attribution tag.
 
     Args:
         params: Keyword arguments destined for a Firecrawl client method.
+        integration: The attribution tag; defaults to :data:`INTEGRATION`.
 
     Returns:
         A new mapping without ``None`` values and with ``integration`` set to
-        :data:`INTEGRATION`.
+        ``integration``.
     """
     cleaned = {k: v for k, v in params.items() if v is not None}
-    cleaned["integration"] = INTEGRATION
+    cleaned["integration"] = integration
     return cleaned
 
 
