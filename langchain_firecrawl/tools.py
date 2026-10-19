@@ -16,7 +16,12 @@ from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
 from pydantic import Field, SecretStr, model_validator
 
-from langchain_firecrawl._utilities import clean_params, initialize_client, to_dict
+from langchain_firecrawl._utilities import (
+    INTEGRATION,
+    clean_params,
+    initialize_client,
+    to_dict,
+)
 
 
 def _page_to_dict(doc: Any) -> dict[str, Any]:
@@ -47,6 +52,8 @@ class _FirecrawlBaseTool(BaseTool):
     client: Firecrawl = Field(default=None)  # type: ignore[assignment]
     api_key: SecretStr = Field(default=SecretStr(""))
     api_url: str | None = None
+    integration: str = INTEGRATION
+    """Attribution tag sent as ``integration`` on every call."""
 
     @model_validator(mode="before")
     @classmethod
@@ -122,7 +129,8 @@ class FirecrawlScrape(_FirecrawlBaseTool):
                         "wait_for": wait_for,
                         "timeout": timeout,
                         "mobile": mobile,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return _page_to_dict(doc)
@@ -198,7 +206,8 @@ class FirecrawlCrawl(_FirecrawlBaseTool):
                         "allow_external_links": allow_external_links,
                         "poll_interval": poll_interval,
                         "timeout": timeout,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return [_page_to_dict(doc) for doc in getattr(job, "data", None) or []]
@@ -260,7 +269,8 @@ class FirecrawlMap(_FirecrawlBaseTool):
                         "limit": limit,
                         "sitemap": sitemap,
                         "include_subdomains": include_subdomains,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return [
@@ -333,7 +343,8 @@ class FirecrawlExtract(_FirecrawlBaseTool):
                         "system_prompt": system_prompt,
                         "enable_web_search": enable_web_search,
                         "show_sources": show_sources,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             data = getattr(response, "data", None)
@@ -394,7 +405,8 @@ class FirecrawlSearch(_FirecrawlBaseTool):
                         "sources": sources,
                         "categories": categories,
                         "tbs": tbs,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return _search_results(data)
