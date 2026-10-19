@@ -44,9 +44,11 @@ agent:
 ```python
 from langchain_firecrawl import (
     FirecrawlScrape,
+    FirecrawlBatchScrape,
     FirecrawlCrawl,
     FirecrawlMap,
     FirecrawlExtract,
+    FirecrawlAgent,
     FirecrawlSearch,
 )
 
@@ -57,6 +59,44 @@ print(result["markdown"])
 search = FirecrawlSearch()
 print(search.invoke({"query": "best web scraping libraries", "limit": 5}))
 ```
+
+| Tool | Name | What it does |
+| --- | --- | --- |
+| `FirecrawlScrape` | `firecrawl_scrape` | Scrape one URL as markdown. |
+| `FirecrawlBatchScrape` | `firecrawl_batch_scrape` | Scrape a list of URLs in one job. |
+| `FirecrawlCrawl` | `firecrawl_crawl` | Crawl a site and return each page. |
+| `FirecrawlMap` | `firecrawl_map` | Discover the URLs on a site. |
+| `FirecrawlExtract` | `firecrawl_extract` | Extract structured data from URLs. |
+| `FirecrawlAgent` | `firecrawl_agent` | Research and extract data from a prompt. |
+| `FirecrawlSearch` | `firecrawl_search` | Search the web. |
+
+`FirecrawlBatchScrape` and `FirecrawlAgent` take the same `FIRECRAWL_API_KEY`
+setup as the other tools:
+
+```python
+from langchain_firecrawl import FirecrawlAgent, FirecrawlBatchScrape
+
+batch = FirecrawlBatchScrape()
+pages = batch.invoke(
+    {"urls": ["https://www.firecrawl.dev", "https://docs.firecrawl.dev"]}
+)
+print([page["metadata"].get("title") for page in pages])
+
+agent = FirecrawlAgent()
+print(
+    agent.invoke(
+        {
+            "prompt": "Find the pricing tiers on this site.",
+            "urls": ["https://www.firecrawl.dev"],
+            "max_credits": 100,
+        }
+    )
+)
+```
+
+`FirecrawlAgent` returns the agent's result data, or the status payload (with its
+`id`) if the run failed or is still running when `timeout` elapses. Use
+`max_credits` to cap what a single run can spend.
 
 ## Documentation
 

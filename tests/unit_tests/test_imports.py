@@ -4,6 +4,8 @@ from langchain_firecrawl import __all__
 
 EXPECTED_ALL = [
     "FireCrawlLoader",
+    "FirecrawlAgent",
+    "FirecrawlBatchScrape",
     "FirecrawlCrawl",
     "FirecrawlExtract",
     "FirecrawlLoader",

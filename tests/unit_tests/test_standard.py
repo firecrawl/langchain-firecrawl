@@ -10,6 +10,8 @@ from typing import Any
 from langchain_tests.unit_tests import ToolsUnitTests
 
 from langchain_firecrawl import (
+    FirecrawlAgent,
+    FirecrawlBatchScrape,
     FirecrawlCrawl,
     FirecrawlExtract,
     FirecrawlMap,
@@ -135,6 +137,54 @@ class TestFirecrawlSearchUnit(ToolsUnitTests):
     def tool_invoke_params_example(self) -> dict[str, Any]:
         """Example args matching the tool's input schema."""
         return {"query": "what is firecrawl"}
+
+    @property
+    def init_from_env_params(self) -> tuple[dict, dict, dict]:
+        """Env vars, init args, and expected attrs for env init."""
+        return _ENV, {}, _EXPECTED
+
+
+class TestFirecrawlBatchScrapeUnit(ToolsUnitTests):
+    """Standard unit tests for `FirecrawlBatchScrape`."""
+
+    @property
+    def tool_constructor(self) -> type[FirecrawlBatchScrape]:
+        """The tool class under test."""
+        return FirecrawlBatchScrape
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        """Params passed to the constructor."""
+        return _PARAMS
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        """Example args matching the tool's input schema."""
+        return {"urls": ["https://example.com"]}
+
+    @property
+    def init_from_env_params(self) -> tuple[dict, dict, dict]:
+        """Env vars, init args, and expected attrs for env init."""
+        return _ENV, {}, _EXPECTED
+
+
+class TestFirecrawlAgentUnit(ToolsUnitTests):
+    """Standard unit tests for `FirecrawlAgent`."""
+
+    @property
+    def tool_constructor(self) -> type[FirecrawlAgent]:
+        """The tool class under test."""
+        return FirecrawlAgent
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        """Params passed to the constructor."""
+        return _PARAMS
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        """Example args matching the tool's input schema."""
+        return {"prompt": "What is firecrawl", "urls": ["https://example.com"]}
 
     @property
     def init_from_env_params(self) -> tuple[dict, dict, dict]:

@@ -24,9 +24,10 @@ requires-python = ">=3.10.0,<4.0.0"
 dependencies = [
     "langchain-core>=1.4.0,<2.0.0",
     # firecrawl-py 4.28.2 is runtime-verified; the v2 client (`Firecrawl`,
-    # aliased as `FirecrawlApp`) exposes scrape/crawl/map/extract/search with the
-    # `integration` kwarg. 4.3.6 is the documented v2 map-response baseline.
-    "firecrawl-py>=4.3.6,<5.0.0",
+    # aliased as `FirecrawlApp`) exposes scrape/batch_scrape/crawl/map/extract/
+    # agent/search with the `integration` kwarg. 4.13.0 is the first release with
+    # the full `agent` signature (max_credits, strict_constrain_to_urls, model).
+    "firecrawl-py>=4.13.0,<5.0.0",
 ]
 
 [project.urls]

@@ -1,10 +1,11 @@
 """Tools for the Firecrawl v2 API.
 
 Each capability of the Firecrawl v2 API is exposed as a ``BaseTool`` so it can be
-bound to an agent: scrape, crawl, map, extract, and search. Responses are the
-typed pydantic models returned by ``firecrawl-py`` >= 4.3.6, normalized into
-JSON-friendly dicts. Every call is tagged with ``integration="langchain"`` for
-attribution (see :mod:`langchain_firecrawl._utilities`).
+bound to an agent: scrape, batch scrape, crawl, map, extract, agent, and search.
+Responses are the typed pydantic models returned by ``firecrawl-py`` >= 4.13.0,
+normalized into JSON-friendly dicts. Every call is tagged with
+``integration="langchain"`` for attribution (see
+:mod:`langchain_firecrawl._utilities`).
 """
 
 from __future__ import annotations
@@ -126,6 +127,88 @@ class FirecrawlScrape(_FirecrawlBaseTool):
                 ),
             )
             return _page_to_dict(doc)
+        except Exception as e:
+            return repr(e)
+
+
+class FirecrawlBatchScrape(_FirecrawlBaseTool):
+    """Scrape several URLs in one job and return each page as markdown.
+
+    Setup:
+        Install ``langchain-firecrawl`` and set ``FIRECRAWL_API_KEY``.
+
+    Instantiation:
+        ```python
+        from langchain_firecrawl import FirecrawlBatchScrape
+
+        tool = FirecrawlBatchScrape()
+        tool.invoke({"urls": ["https://firecrawl.dev", "https://docs.firecrawl.dev"]})
+        ```
+    """
+
+    name: str = "firecrawl_batch_scrape"
+    description: str = (
+        "Scrape multiple web pages in a single batch job and return each page's "
+        "content as clean, LLM-ready markdown along with page metadata. "
+        "Input should be a list of URLs."
+    )
+
+    def _run(
+        self,
+        urls: list[str],
+        formats: list[str] | None = None,
+        only_main_content: bool | None = None,  # noqa: FBT001
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
+        wait_for: int | None = None,
+        timeout: int | None = None,
+        mobile: bool | None = None,  # noqa: FBT001
+        ignore_invalid_urls: bool | None = None,  # noqa: FBT001
+        max_concurrency: int | None = None,
+        poll_interval: int | None = None,
+        wait_timeout: int | None = None,
+        run_manager: CallbackManagerForToolRun | None = None,
+    ) -> list[dict[str, Any]] | str:
+        """Scrape every URL in ``urls`` as one batch job.
+
+        Args:
+            urls: The URLs to scrape.
+            formats: Output formats to request (e.g. ``["markdown"]``).
+            only_main_content: Whether to return only the main page content.
+            include_tags: HTML tags to include.
+            exclude_tags: HTML tags to exclude.
+            wait_for: Milliseconds to wait for each page to render.
+            timeout: Per-page timeout in milliseconds.
+            mobile: Whether to emulate a mobile device.
+            ignore_invalid_urls: Whether to skip invalid URLs instead of failing.
+            max_concurrency: Maximum number of pages scraped concurrently.
+            poll_interval: Seconds between status polls.
+            wait_timeout: Maximum seconds to wait for the batch job to finish.
+            run_manager: The run manager for callbacks.
+
+        Returns:
+            A list of page dicts (``markdown`` + ``metadata``), or an error string.
+        """
+        try:
+            job = self.client.batch_scrape(
+                urls,
+                **clean_params(
+                    {
+                        "formats": formats,
+                        "only_main_content": only_main_content,
+                        "include_tags": include_tags,
+                        "exclude_tags": exclude_tags,
+                        "wait_for": wait_for,
+                        "timeout": timeout,
+                        "mobile": mobile,
+                        "ignore_invalid_urls": ignore_invalid_urls,
+                        "max_concurrency": max_concurrency,
+                        "poll_interval": poll_interval,
+                        "wait_timeout": wait_timeout,
+                    }
+                ),
+            )
+            return [_page_to_dict(doc) for doc in getattr(job, "data", None) or []]
         except Exception as e:
             return repr(e)
 
@@ -333,6 +416,86 @@ class FirecrawlExtract(_FirecrawlBaseTool):
                         "system_prompt": system_prompt,
                         "enable_web_search": enable_web_search,
                         "show_sources": show_sources,
+                    }
+                ),
+            )
+            data = getattr(response, "data", None)
+            return data if data is not None else to_dict(response)
+        except Exception as e:
+            return repr(e)
+
+
+class FirecrawlAgent(_FirecrawlBaseTool):
+    """Run the Firecrawl agent to research and extract data from a prompt.
+
+    Setup:
+        Install ``langchain-firecrawl`` and set ``FIRECRAWL_API_KEY``.
+
+    Instantiation:
+        ```python
+        from langchain_firecrawl import FirecrawlAgent
+
+        tool = FirecrawlAgent()
+        tool.invoke(
+            {
+                "prompt": "Find the pricing tiers on this site.",
+                "urls": ["https://firecrawl.dev"],
+                "max_credits": 100,
+            }
+        )
+        ```
+    """
+
+    name: str = "firecrawl_agent"
+    description: str = (
+        "Run an autonomous Firecrawl agent that browses the web to answer a "
+        "natural-language 'prompt' and return structured data. Optionally pass "
+        "'urls' to focus the agent, a JSON 'schema' for the output shape, and "
+        "'max_credits' to cap spend."
+    )
+
+    def _run(
+        self,
+        prompt: str,
+        urls: list[str] | None = None,
+        schema: dict[str, Any] | None = None,
+        max_credits: int | None = None,
+        strict_constrain_to_urls: bool | None = None,  # noqa: FBT001
+        model: Literal["spark-1-pro", "spark-1-mini"] | None = None,
+        poll_interval: int | None = None,
+        timeout: int | None = None,
+        run_manager: CallbackManagerForToolRun | None = None,
+    ) -> Any:
+        """Run the agent on ``prompt``.
+
+        Args:
+            prompt: Natural-language description of the data to find or extract.
+            urls: Optional URLs the agent should start from.
+            schema: Optional JSON schema describing the desired output shape.
+            max_credits: Maximum credits the agent may spend on this run.
+            strict_constrain_to_urls: Whether to restrict the agent to ``urls``.
+            model: The agent model to use (``spark-1-pro`` or ``spark-1-mini``).
+            poll_interval: Seconds between status polls.
+            timeout: Maximum seconds to wait for the agent to finish.
+            run_manager: The run manager for callbacks.
+
+        Returns:
+            The agent's result (``response.data``); when there is none (the run
+            failed or is still running), the status payload including its ``id``.
+            An error string if the call raises.
+        """
+        try:
+            response = self.client.agent(
+                urls,
+                **clean_params(
+                    {
+                        "prompt": prompt,
+                        "schema": schema,
+                        "max_credits": max_credits,
+                        "strict_constrain_to_urls": strict_constrain_to_urls,
+                        "model": model,
+                        "poll_interval": poll_interval,
+                        "timeout": timeout,
                     }
                 ),
             )

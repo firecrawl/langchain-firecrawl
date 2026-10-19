@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from langchain_firecrawl import (
+    FirecrawlAgent,
+    FirecrawlBatchScrape,
     FirecrawlCrawl,
     FirecrawlExtract,
     FirecrawlMap,
@@ -53,6 +55,36 @@ def test_scrape_tool_forwards_options() -> None:
     kwargs = tool.client.scrape.call_args.kwargs
     assert kwargs["formats"] == ["markdown"]
     assert kwargs["mobile"] is True
+
+
+def test_batch_scrape_tool_returns_page_list() -> None:
+    """Batch scrape returns one dict per page and forwards options."""
+    tool = FirecrawlBatchScrape(api_key="fc-test")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.batch_scrape.return_value = SimpleNamespace(
+        data=[_doc("one", {"source_url": "https://a.example"}), _doc("two", {})]
+    )
+
+    result = tool.invoke(
+        {
+            "urls": ["https://a.example", "https://b.example"],
+            "formats": ["markdown"],
+            "max_concurrency": 2,
+            "wait_timeout": 60,
+        }
+    )
+
+    assert result == [
+        {"markdown": "one", "metadata": {"source_url": "https://a.example"}},
+        {"markdown": "two", "metadata": {}},
+    ]
+    call = tool.client.batch_scrape.call_args
+    assert call.args[0] == ["https://a.example", "https://b.example"]
+    assert call.kwargs["formats"] == ["markdown"]
+    assert call.kwargs["max_concurrency"] == 2
+    assert call.kwargs["wait_timeout"] == 60
+    assert call.kwargs["integration"] == "langchain"
+    assert "mobile" not in call.kwargs
 
 
 def test_crawl_tool_returns_page_list() -> None:
@@ -103,6 +135,47 @@ def test_extract_tool_returns_data() -> None:
     assert call.kwargs["integration"] == "langchain"
 
 
+def test_agent_tool_returns_data_and_tags_call() -> None:
+    """Agent returns the result `data` and forwards its options."""
+    tool = FirecrawlAgent(api_key="fc-test")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.agent.return_value = SimpleNamespace(
+        id="job-1", status="completed", data={"plan": "Free"}
+    )
+
+    result = tool.invoke(
+        {
+            "prompt": "Find the cheapest plan",
+            "urls": ["https://example.com"],
+            "max_credits": 50,
+            "model": "spark-1-mini",
+        }
+    )
+
+    assert result == {"plan": "Free"}
+    call = tool.client.agent.call_args
+    assert call.args[0] == ["https://example.com"]
+    assert call.kwargs["prompt"] == "Find the cheapest plan"
+    assert call.kwargs["max_credits"] == 50
+    assert call.kwargs["model"] == "spark-1-mini"
+    assert call.kwargs["integration"] == "langchain"
+    assert "schema" not in call.kwargs
+
+
+def test_agent_tool_without_urls_and_without_data() -> None:
+    """Agent works without URLs and falls back to the status payload."""
+    tool = FirecrawlAgent(api_key="fc-test")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.agent.return_value = SimpleNamespace(
+        id="job-2", status="processing", data=None, error=None
+    )
+
+    result = tool.invoke({"prompt": "Research Firecrawl"})
+
+    assert result == {"id": "job-2", "status": "processing"}
+    assert tool.client.agent.call_args.args[0] is None
+
+
 def test_search_tool_flattens_sources() -> None:
     """Search flattens web/news/images results and stamps the source type."""
     tool = FirecrawlSearch(api_key="fc-test")  # type: ignore[arg-type]
@@ -134,7 +207,13 @@ def test_search_tool_flattens_sources() -> None:
     ("tool_cls", "method", "params"),
     [
         (FirecrawlScrape, "scrape", {"url": "https://example.com"}),
+        (
+            FirecrawlBatchScrape,
+            "batch_scrape",
+            {"urls": ["https://example.com"]},
+        ),
         (FirecrawlMap, "map", {"url": "https://example.com"}),
+        (FirecrawlAgent, "agent", {"prompt": "x"}),
         (FirecrawlSearch, "search", {"query": "x"}),
     ],
 )

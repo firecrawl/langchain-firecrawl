@@ -4,6 +4,8 @@ from importlib import metadata
 
 from langchain_firecrawl.document_loaders import FireCrawlLoader, FirecrawlLoader
 from langchain_firecrawl.tools import (
+    FirecrawlAgent,
+    FirecrawlBatchScrape,
     FirecrawlCrawl,
     FirecrawlExtract,
     FirecrawlMap,
@@ -20,6 +22,8 @@ del metadata  # optional, avoids polluting the results of dir(__package__)
 
 __all__ = [
     "FireCrawlLoader",
+    "FirecrawlAgent",
+    "FirecrawlBatchScrape",
     "FirecrawlCrawl",
     "FirecrawlExtract",
     "FirecrawlLoader",
