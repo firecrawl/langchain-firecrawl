@@ -89,18 +89,48 @@ def test_map_tool_returns_links() -> None:
 
 
 def test_extract_tool_returns_data() -> None:
-    """Extract returns the structured `data` payload."""
+    """Extract scrapes the URL with a json format and returns its `json`."""
     tool = FirecrawlExtract(api_key="fc-test")  # type: ignore[arg-type]
     tool.client = MagicMock()
-    tool.client.extract.return_value = SimpleNamespace(data={"title": "Firecrawl"})
+    tool.client.scrape.return_value = SimpleNamespace(json={"title": "Firecrawl"})
 
     result = tool.invoke({"urls": ["https://example.com"], "prompt": "Get the title"})
 
     assert result == {"title": "Firecrawl"}
-    call = tool.client.extract.call_args
-    assert call.args[0] == ["https://example.com"]
-    assert call.kwargs["prompt"] == "Get the title"
-    assert call.kwargs["integration"] == "langchain"
+    tool.client.extract.assert_not_called()
+    call = tool.client.scrape.call_args
+    assert call.args[0] == "https://example.com"
+    assert call.kwargs == {
+        "formats": [{"type": "json", "prompt": "Get the title"}],
+        "integration": "langchain",
+    }
+
+
+def test_extract_tool_maps_multiple_urls() -> None:
+    """With several URLs, Extract scrapes each and returns a url -> json mapping."""
+    tool = FirecrawlExtract(api_key="fc-test")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.scrape.side_effect = [
+        SimpleNamespace(json={"title": "A"}),
+        SimpleNamespace(json={"title": "B"}),
+    ]
+    schema = {"type": "object", "properties": {"title": {"type": "string"}}}
+
+    result = tool.invoke(
+        {"urls": ["https://a.example", "https://b.example"], "schema": schema}
+    )
+
+    assert result == {
+        "https://a.example": {"title": "A"},
+        "https://b.example": {"title": "B"},
+    }
+    assert [c.args[0] for c in tool.client.scrape.call_args_list] == [
+        "https://a.example",
+        "https://b.example",
+    ]
+    assert tool.client.scrape.call_args.kwargs["formats"] == [
+        {"type": "json", "schema": schema}
+    ]
 
 
 def test_search_tool_flattens_sources() -> None:
@@ -134,6 +164,7 @@ def test_search_tool_flattens_sources() -> None:
     ("tool_cls", "method", "params"),
     [
         (FirecrawlScrape, "scrape", {"url": "https://example.com"}),
+        (FirecrawlExtract, "scrape", {"urls": ["https://example.com"]}),
         (FirecrawlMap, "map", {"url": "https://example.com"}),
         (FirecrawlSearch, "search", {"query": "x"}),
     ],
