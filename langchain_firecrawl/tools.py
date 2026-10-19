@@ -304,42 +304,35 @@ class FirecrawlExtract(_FirecrawlBaseTool):
         urls: list[str],
         prompt: str | None = None,
         schema: dict[str, Any] | None = None,
-        system_prompt: str | None = None,
-        enable_web_search: bool | None = None,  # noqa: FBT001
-        show_sources: bool | None = None,  # noqa: FBT001
         run_manager: CallbackManagerForToolRun | None = None,
     ) -> Any:
-        """Extract from ``urls``.
+        """Extract from ``urls`` by scraping each one with a ``json`` format.
 
         Args:
             urls: The URLs to extract data from.
             prompt: Natural-language description of the data to extract.
             schema: Optional JSON schema describing the desired output shape.
-            system_prompt: Optional system prompt to steer extraction.
-            enable_web_search: Whether the extractor may search the web.
-            show_sources: Whether to include source references.
             run_manager: The run manager for callbacks.
 
         Returns:
-            The extracted data (``response.data``), or an error string.
+            The extracted JSON for a single URL, a ``{url: json}`` mapping for
+            several URLs, or an error string.
         """
+        json_format = {
+            k: v
+            for k, v in {"type": "json", "prompt": prompt, "schema": schema}.items()
+            if v is not None
+        }
         try:
-            response = self.client.extract(
-                urls,
-                **clean_params(
-                    {
-                        "prompt": prompt,
-                        "schema": schema,
-                        "system_prompt": system_prompt,
-                        "enable_web_search": enable_web_search,
-                        "show_sources": show_sources,
-                    }
-                ),
-            )
-            data = getattr(response, "data", None)
-            return data if data is not None else to_dict(response)
+            results = {
+                url: self.client.scrape(
+                    url, **clean_params({"formats": [json_format]})
+                ).json
+                for url in urls
+            }
         except Exception as e:
             return repr(e)
+        return results[urls[0]] if len(urls) == 1 else results
 
 
 class FirecrawlSearch(_FirecrawlBaseTool):
