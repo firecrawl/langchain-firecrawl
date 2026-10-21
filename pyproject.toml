@@ -31,7 +31,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://www.firecrawl.dev"
-Documentation = "https://docs.langchain.com/oss/python/integrations/providers/firecrawl"
+Documentation = "https://docs.firecrawl.dev/integrations/langchain"
 Repository = "https://github.com/firecrawl/langchain-firecrawl"
 Issues = "https://github.com/firecrawl/langchain-firecrawl/issues"
 Changelog = "https://github.com/firecrawl/langchain-firecrawl/releases"
