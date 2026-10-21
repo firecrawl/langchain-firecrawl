@@ -60,6 +60,6 @@ print(search.invoke({"query": "best web scraping libraries", "limit": 5}))
 
 ## Documentation
 
-- LangChain provider docs: [docs.langchain.com](https://docs.langchain.com/oss/python/integrations/providers/firecrawl)
+- LangChain integration docs: [docs.firecrawl.dev](https://docs.firecrawl.dev/integrations/langchain)
 - Firecrawl docs: [docs.firecrawl.dev](https://docs.firecrawl.dev)
 - Firecrawl homepage: [firecrawl.dev](https://www.firecrawl.dev)
