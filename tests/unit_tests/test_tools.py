@@ -150,3 +150,14 @@ def test_tool_returns_error_string_on_exception(
 
     assert isinstance(result, str)
     assert "boom" in result
+
+
+def test_integration_tag_is_overridable_per_tool() -> None:
+    """A host can replace the default tag; the API accepts underscore-prefixed names."""
+    tool = FirecrawlScrape(api_key="fc-test", integration="_host")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.scrape.return_value = _doc("x", {})
+
+    tool.invoke({"url": "https://example.com"})
+
+    assert tool.client.scrape.call_args.kwargs["integration"] == "_host"
