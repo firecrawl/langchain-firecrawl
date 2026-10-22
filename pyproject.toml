@@ -23,10 +23,10 @@ classifiers = [
 requires-python = ">=3.10.0,<4.0.0"
 dependencies = [
     "langchain-core>=1.4.0,<2.0.0",
-    # firecrawl-py 4.28.2 is runtime-verified; the v2 client (`Firecrawl`,
+    # firecrawl-py 4.42.0 adds find_tools and scrape_alexandria; the v2 client (`Firecrawl`,
     # aliased as `FirecrawlApp`) exposes scrape/crawl/map/extract/search with the
     # `integration` kwarg. 4.3.6 is the documented v2 map-response baseline.
-    "firecrawl-py>=4.3.6,<5.0.0",
+    "firecrawl-py>=4.42.0,<5.0.0",
 ]
 
 [project.urls]

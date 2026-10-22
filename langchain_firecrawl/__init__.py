@@ -6,7 +6,9 @@ from langchain_firecrawl.document_loaders import FireCrawlLoader, FirecrawlLoade
 from langchain_firecrawl.tools import (
     FirecrawlCrawl,
     FirecrawlExtract,
+    FirecrawlFindTools,
     FirecrawlMap,
+    FirecrawlProviderTool,
     FirecrawlScrape,
     FirecrawlSearch,
 )
@@ -22,8 +24,10 @@ __all__ = [
     "FireCrawlLoader",
     "FirecrawlCrawl",
     "FirecrawlExtract",
+    "FirecrawlFindTools",
     "FirecrawlLoader",
     "FirecrawlMap",
+    "FirecrawlProviderTool",
     "FirecrawlScrape",
     "FirecrawlSearch",
     "__version__",

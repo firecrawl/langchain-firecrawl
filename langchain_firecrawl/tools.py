@@ -400,3 +400,130 @@ class FirecrawlSearch(_FirecrawlBaseTool):
             return _search_results(data)
         except Exception as e:
             return repr(e)
+
+
+class FirecrawlFindTools(_FirecrawlBaseTool):
+    """Find a data provider capability in Firecrawl's Alexandria catalogue.
+
+    Setup:
+        Install ``langchain-firecrawl`` and set ``FIRECRAWL_API_KEY``.
+
+    Instantiation:
+        ```python
+        from langchain_firecrawl import FirecrawlFindTools
+
+        tool = FirecrawlFindTools()
+        tool.invoke({"query": "SEC filings for a company"})
+        ```
+    """
+
+    name: str = "firecrawl_find_tools"
+    description: str = (
+        "Search Firecrawl's Alexandria catalogue of data providers (companies, "
+        "people, jobs, filings, public records, places, prices, packages, news, "
+        "research) for a capability and its inputs. Free. Run the chosen "
+        "capability with firecrawl_provider_tool."
+    )
+
+    def _run(
+        self,
+        query: str | None = None,
+        urls: list[str] | None = None,
+        providers: list[str] | None = None,
+        capabilities: list[str] | None = None,
+        level: Literal["providers", "groups", "tools"] | None = None,
+        expand: list[Literal["options", "response", "examples"]] | None = None,
+        limit: int | None = None,
+        run_manager: CallbackManagerForToolRun | None = None,
+    ) -> dict[str, Any] | str:
+        """Find catalogue entries.
+
+        Args:
+            query: The data needed, in plain words.
+            urls: Websites whose providers should come first.
+            providers: Provider ids to narrow to.
+            capabilities: Capability ids to narrow to.
+            level: Browse ``providers``, ``groups`` or ``tools``.
+            expand: Contract parts to include (``options``, ``response``, ``examples``).
+            limit: Maximum number of entries to return.
+            run_manager: The run manager for callbacks.
+
+        Returns:
+            The catalogue page as a dict, or an error string.
+        """
+        try:
+            options = {
+                "query": query,
+                "urls": urls,
+                "providers": providers,
+                "capabilities": capabilities,
+                "level": level,
+                "expand": expand,
+                "limit": limit,
+            }
+            data = self.client.find_tools(
+                **{k: v for k, v in options.items() if v is not None}
+            )
+            return to_dict(data)
+        except Exception as e:
+            return repr(e)
+
+
+class FirecrawlProviderTool(_FirecrawlBaseTool):
+    """Run an Alexandria data provider capability and return its records.
+
+    Setup:
+        Install ``langchain-firecrawl`` and set ``FIRECRAWL_API_KEY``.
+
+    Instantiation:
+        ```python
+        from langchain_firecrawl import FirecrawlProviderTool
+
+        tool = FirecrawlProviderTool()
+        tool.invoke(
+            {
+                "provider": "sec-gov",
+                "capability": "filings/filings",
+                "options": {"cik": "320193"},
+            }
+        )
+        ```
+    """
+
+    name: str = "firecrawl_provider_tool"
+    description: str = (
+        "Run a data provider capability found with firecrawl_find_tools and "
+        "return its records. Use only the provider, capability and input names "
+        "the catalogue returned; a capability may have a price."
+    )
+
+    def _run(
+        self,
+        provider: str,
+        capability: str,
+        options: dict[str, Any] | None = None,
+        timeout: int | None = None,
+        run_manager: CallbackManagerForToolRun | None = None,
+    ) -> dict[str, Any] | str:
+        """Run one provider capability.
+
+        Args:
+            provider: Provider id from the catalogue.
+            capability: Capability id from the catalogue.
+            options: The capability's inputs.
+            timeout: Milliseconds, at most 120000.
+            run_manager: The run manager for callbacks.
+
+        Returns:
+            The call's result (data or error) as a dict, or an error string.
+        """
+        try:
+            call: dict[str, Any] = {"provider": provider, "capability": capability}
+            if options is not None:
+                call["options"] = options
+            result = self.client.scrape_alexandria(
+                call, **clean_params({"timeout": timeout})
+            )
+            return to_dict(result.alexandria[0])
+        except Exception as e:
+            return repr(e)

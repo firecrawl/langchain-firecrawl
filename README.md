@@ -58,6 +58,19 @@ search = FirecrawlSearch()
 print(search.invoke({"query": "best web scraping libraries", "limit": 5}))
 ```
 
+`FirecrawlFindTools` and `FirecrawlProviderTool` reach Firecrawl's Alexandria
+catalogue of data providers (companies, filings, jobs, places, packages and
+more): find a capability and its inputs, then run it and get its records.
+
+```python
+from langchain_firecrawl import FirecrawlFindTools, FirecrawlProviderTool
+
+print(FirecrawlFindTools().invoke({"query": "SEC filings for a company"}))
+records = FirecrawlProviderTool().invoke(
+    {"provider": "sec-gov", "capability": "filings/filings", "options": {"cik": "320193"}}
+)
+```
+
 ## Documentation
 
 - LangChain integration docs: [docs.firecrawl.dev](https://docs.firecrawl.dev/integrations/langchain)
