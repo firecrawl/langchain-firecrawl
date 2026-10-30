@@ -81,18 +81,38 @@ def test_map_mode(mock_client: MagicMock) -> None:
 
 
 def test_extract_mode(mock_client: MagicMock) -> None:
-    """Extract mode serializes the structured data into page content."""
-    mock_client.extract.return_value = SimpleNamespace(
-        data={"title": "Firecrawl", "price": 0}, sources=None
+    """Extract mode scrapes with a json format and serializes the result."""
+    mock_client.scrape.return_value = SimpleNamespace(
+        json={"title": "Firecrawl", "price": 0},
+        metadata={"source_url": "https://example.com"},
     )
-    loader = FirecrawlLoader(url="https://example.com", mode="extract")
+    schema = {"type": "object", "properties": {"title": {"type": "string"}}}
+    loader = FirecrawlLoader(
+        url="https://example.com",
+        mode="extract",
+        params={"prompt": "Get the title", "schema": schema, "timeout": 30},
+    )
     docs = list(loader.lazy_load())
 
     assert len(docs) == 1
     assert "Firecrawl" in docs[0].page_content
-    args, _ = mock_client.extract.call_args
-    assert args[0] == ["https://example.com"]
-    assert mock_client.extract.call_args.kwargs["integration"] == "langchain"
+    assert docs[0].metadata == {"source_url": "https://example.com"}
+    mock_client.extract.assert_not_called()
+    call = mock_client.scrape.call_args
+    assert call.args[0] == "https://example.com"
+    assert call.kwargs == {
+        "formats": [{"type": "json", "prompt": "Get the title", "schema": schema}],
+        "integration": "langchain",
+    }
+
+
+def test_extract_mode_without_json_yields_nothing(mock_client: MagicMock) -> None:
+    """Extract mode yields no document when the scrape returns no json."""
+    mock_client.scrape.return_value = SimpleNamespace(json=None, metadata={})
+    loader = FirecrawlLoader(url="https://example.com", mode="extract")
+
+    assert list(loader.lazy_load()) == []
+    assert mock_client.scrape.call_args.kwargs["formats"] == [{"type": "json"}]
 
 
 def test_search_mode(mock_client: MagicMock) -> None:

@@ -1,8 +1,8 @@
 """Firecrawl document loader.
 
 Built against the Firecrawl v2 API (``firecrawl-py`` >= 4.3.6), which returns
-typed pydantic models (``Document``, ``CrawlJob``, ``MapData``, ``SearchData``,
-``ExtractResponse``). The canonical class is :class:`FirecrawlLoader`;
+typed pydantic models (``Document``, ``CrawlJob``, ``MapData``, ``SearchData``).
+The canonical class is :class:`FirecrawlLoader`;
 :class:`FireCrawlLoader` remains as a back-compat alias for the casing used by
 the (now-sunset) ``langchain-community`` loader.
 """
@@ -67,18 +67,7 @@ _MAP_PARAMS = {
     "ignore_query_parameters",
     "location",
 }
-_EXTRACT_PARAMS = {
-    "prompt",
-    "schema",
-    "system_prompt",
-    "allow_external_links",
-    "enable_web_search",
-    "show_sources",
-    "scrape_options",
-    "ignore_invalid_urls",
-    "poll_interval",
-    "timeout",
-}
+_EXTRACT_PARAMS = {"prompt", "schema"}
 _SEARCH_PARAMS = {
     "sources",
     "categories",
@@ -240,16 +229,23 @@ class FirecrawlLoader(BaseLoader):
             yield Document(page_content=link.url, metadata=metadata)
 
     def _load_extract(self) -> Iterator[Document]:
-        response = self.firecrawl.extract([self.url], **self._kwargs(_EXTRACT_PARAMS))
-        data = getattr(response, "data", None)
-        if data is None:
+        json_format = {
+            "type": "json",
+            **{
+                k: v
+                for k, v in self.params.items()
+                if k in _EXTRACT_PARAMS and v is not None
+            },
+        }
+        doc = self.firecrawl.scrape(
+            self.url, formats=[json_format], integration=INTEGRATION
+        )
+        if doc.json is None:
             return
-        page_content = json.dumps(data, default=str, ensure_ascii=False)
-        metadata: dict[str, Any] = {}
-        sources = getattr(response, "sources", None)
-        if sources:
-            metadata["sources"] = sources
-        yield Document(page_content=page_content, metadata=metadata)
+        yield Document(
+            page_content=json.dumps(doc.json, default=str, ensure_ascii=False),
+            metadata=to_dict(doc.metadata),
+        )
 
     def _load_search(self) -> Iterator[Document]:
         data = self.firecrawl.search(

@@ -16,7 +16,12 @@ from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
 from pydantic import Field, SecretStr, model_validator
 
-from langchain_firecrawl._utilities import clean_params, initialize_client, to_dict
+from langchain_firecrawl._utilities import (
+    INTEGRATION,
+    clean_params,
+    initialize_client,
+    to_dict,
+)
 
 
 def _page_to_dict(doc: Any) -> dict[str, Any]:
@@ -47,6 +52,8 @@ class _FirecrawlBaseTool(BaseTool):
     client: Firecrawl = Field(default=None)  # type: ignore[assignment]
     api_key: SecretStr = Field(default=SecretStr(""))
     api_url: str | None = None
+    integration: str = INTEGRATION
+    """Attribution tag sent as ``integration`` on every call."""
 
     @model_validator(mode="before")
     @classmethod
@@ -122,7 +129,8 @@ class FirecrawlScrape(_FirecrawlBaseTool):
                         "wait_for": wait_for,
                         "timeout": timeout,
                         "mobile": mobile,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return _page_to_dict(doc)
@@ -198,7 +206,8 @@ class FirecrawlCrawl(_FirecrawlBaseTool):
                         "allow_external_links": allow_external_links,
                         "poll_interval": poll_interval,
                         "timeout": timeout,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return [_page_to_dict(doc) for doc in getattr(job, "data", None) or []]
@@ -260,7 +269,8 @@ class FirecrawlMap(_FirecrawlBaseTool):
                         "limit": limit,
                         "sitemap": sitemap,
                         "include_subdomains": include_subdomains,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return [
@@ -304,42 +314,36 @@ class FirecrawlExtract(_FirecrawlBaseTool):
         urls: list[str],
         prompt: str | None = None,
         schema: dict[str, Any] | None = None,
-        system_prompt: str | None = None,
-        enable_web_search: bool | None = None,  # noqa: FBT001
-        show_sources: bool | None = None,  # noqa: FBT001
         run_manager: CallbackManagerForToolRun | None = None,
     ) -> Any:
-        """Extract from ``urls``.
+        """Extract from ``urls`` by scraping each one with a ``json`` format.
 
         Args:
             urls: The URLs to extract data from.
             prompt: Natural-language description of the data to extract.
             schema: Optional JSON schema describing the desired output shape.
-            system_prompt: Optional system prompt to steer extraction.
-            enable_web_search: Whether the extractor may search the web.
-            show_sources: Whether to include source references.
             run_manager: The run manager for callbacks.
 
         Returns:
-            The extracted data (``response.data``), or an error string.
+            The extracted JSON for a single URL, a ``{url: json}`` mapping for
+            several URLs, or an error string.
         """
+        json_format = {
+            k: v
+            for k, v in {"type": "json", "prompt": prompt, "schema": schema}.items()
+            if v is not None
+        }
         try:
-            response = self.client.extract(
-                urls,
-                **clean_params(
-                    {
-                        "prompt": prompt,
-                        "schema": schema,
-                        "system_prompt": system_prompt,
-                        "enable_web_search": enable_web_search,
-                        "show_sources": show_sources,
-                    }
-                ),
-            )
-            data = getattr(response, "data", None)
-            return data if data is not None else to_dict(response)
+            results = {
+                url: self.client.scrape(
+                    url,
+                    **clean_params({"formats": [json_format]}, self.integration),
+                ).json
+                for url in urls
+            }
         except Exception as e:
             return repr(e)
+        return results[urls[0]] if len(urls) == 1 else results
 
 
 class FirecrawlSearch(_FirecrawlBaseTool):
@@ -394,7 +398,8 @@ class FirecrawlSearch(_FirecrawlBaseTool):
                         "sources": sources,
                         "categories": categories,
                         "tbs": tbs,
-                    }
+                    },
+                    self.integration,
                 ),
             )
             return _search_results(data)
