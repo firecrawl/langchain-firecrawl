@@ -1,5 +1,6 @@
 """Integration tests for `FirecrawlLoader` (gated on `FIRECRAWL_API_KEY`)."""
 
+import json
 import os
 
 import pytest
@@ -30,3 +31,15 @@ def test_loader_map() -> None:
     docs = loader.load()
     assert docs
     assert docs[0].page_content.startswith("http")
+
+
+def test_loader_extract() -> None:
+    """Extract mode returns one `Document` holding the extracted JSON."""
+    loader = FirecrawlLoader(
+        url="https://example.com",
+        mode="extract",
+        params={"prompt": "Extract the page title as 'title'."},
+    )
+    docs = loader.load()
+    assert len(docs) == 1
+    assert json.loads(docs[0].page_content)

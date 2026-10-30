@@ -4,7 +4,12 @@ import os
 
 import pytest
 
-from langchain_firecrawl import FirecrawlMap, FirecrawlScrape, FirecrawlSearch
+from langchain_firecrawl import (
+    FirecrawlExtract,
+    FirecrawlMap,
+    FirecrawlScrape,
+    FirecrawlSearch,
+)
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("FIRECRAWL_API_KEY"),
@@ -34,3 +39,22 @@ def test_map_tool() -> None:
     result = tool.invoke({"url": "https://firecrawl.dev", "limit": 5})
     assert isinstance(result, list), result
     assert result
+
+
+def test_extract_tool_single_url() -> None:
+    """Extract with one URL returns that page's JSON."""
+    tool = FirecrawlExtract()
+    schema = {"type": "object", "properties": {"title": {"type": "string"}}}
+    result = tool.invoke({"urls": ["https://example.com"], "schema": schema})
+    assert isinstance(result, dict), result
+    assert result.get("title")
+
+
+def test_extract_tool_multiple_urls() -> None:
+    """Extract with several URLs returns a url -> json mapping."""
+    tool = FirecrawlExtract()
+    urls = ["https://example.com", "https://example.org"]
+    result = tool.invoke({"urls": urls, "prompt": "Extract the page title as 'title'."})
+    assert isinstance(result, dict), result
+    assert set(result) == set(urls)
+    assert all(isinstance(v, dict) for v in result.values())

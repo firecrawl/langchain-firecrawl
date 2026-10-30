@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-firecrawl"
-version = "0.1.1"
+version = "0.2.0"
 description = "An integration package connecting Firecrawl and LangChain"
 license = { text = "MIT" }
 readme = "README.md"

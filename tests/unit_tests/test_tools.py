@@ -192,3 +192,14 @@ def test_integration_tag_is_overridable_per_tool() -> None:
     tool.invoke({"url": "https://example.com"})
 
     assert tool.client.scrape.call_args.kwargs["integration"] == "_host"
+
+
+def test_extract_tool_sends_overridden_integration_tag() -> None:
+    """Extract forwards the tool's `integration` value on each scrape call."""
+    tool = FirecrawlExtract(api_key="fc-test", integration="_host")  # type: ignore[arg-type]
+    tool.client = MagicMock()
+    tool.client.scrape.return_value = SimpleNamespace(json={"title": "x"})
+
+    tool.invoke({"urls": ["https://example.com"], "prompt": "Get the title"})
+
+    assert tool.client.scrape.call_args.kwargs["integration"] == "_host"
